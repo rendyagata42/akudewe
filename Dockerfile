@@ -1,14 +1,17 @@
 FROM php:8.1-apache
 
-# 1. Instal ekstensi mysqli
+# Instal ekstensi mysqli
 RUN docker-php-ext-install mysqli
 
-# 2. Perbaikan Error "More than one MPM loaded"
-# Kita nonaktifkan mpm_event dan mpm_worker agar hanya mpm_prefork yang aktif
-RUN a2dismod mpm_event mpm_worker && a2enmod mpm_prefork
+# 1. Hapus semua konfigurasi modul MPM yang ada di folder mods-enabled
+# Ini akan membersihkan semua modul yang konflik
+RUN rm -rf /etc/apache2/mods-enabled/mpm_*.load /etc/apache2/mods-enabled/mpm_*.conf
 
-# 3. Salin file aplikasi
+# 2. Paksa aktifkan modul prefork saja
+RUN a2enmod mpm_prefork
+
+# 3. Salin aplikasi
 COPY . /var/www/html/
 
-# 4. Berikan izin akses
+# 4. Beri akses
 RUN chown -R www-data:www-data /var/www/html
