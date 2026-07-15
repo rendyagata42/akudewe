@@ -1,17 +1,35 @@
 FROM php:8.1-apache
 
-# Instal ekstensi mysqli
-RUN docker-php-ext-install mysqli
+# Install PHP extensions (adjust according to your needs)
 
-# 1. Hapus semua konfigurasi modul MPM yang ada di folder mods-enabled
-# Ini akan membersihkan semua modul yang konflik
-RUN rm -rf /etc/apache2/mods-enabled/mpm_*.load /etc/apache2/mods-enabled/mpm_*.conf
+RUN docker-php-ext-install pdo pdo_mysql mysqli
 
-# 2. Paksa aktifkan modul prefork saja
-RUN a2enmod mpm_prefork
+# Enable Apache modules
 
-# 3. Salin aplikasi
+RUN a2enmod rewrite headers
+
+# Set working directory
+
+WORKDIR /var/www/html
+
+# Copy application files
+
 COPY . /var/www/html/
 
-# 4. Beri akses
+# Set permissions
+
 RUN chown -R www-data:www-data /var/www/html
+
+# Expose port 80
+
+EXPOSE 80
+
+# Copy and setup entrypoint script (fixes MPM conflict on Railway)
+
+COPY docker-entrypoint.sh /usr/local/bin/
+
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Start Apache via custom entrypoint
+
+CMD ["/usr/local/bin/docker-entrypoint.sh"]
