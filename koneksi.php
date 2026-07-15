@@ -7,7 +7,7 @@ $port = "25191"; // Port default MySQL di Railway
 
 date_default_timezone_set('Asia/Jakarta');
 
-$conn = new mysqli($host, $user, $pass, $db);
+$conn = new mysqli($host, $user, $pass, $db, $port);
 
 if ($conn->connect_error) {
     die("Koneksi ke database gagal: " . $conn->connect_error);
