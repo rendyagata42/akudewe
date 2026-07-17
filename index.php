@@ -494,6 +494,29 @@ $conn->close();
         </div>
     </main>
 
+    <div id="journalEditModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-3">
+        <div class="w-full max-w-md rounded-3xl bg-white p-4 shadow-2xl">
+            <div class="flex items-start justify-between gap-3 mb-4">
+                <div>
+                    <h3 class="text-lg font-black text-stone-800">Edit Jurnal</h3>
+                    <p class="text-sm text-stone-500">Hapus item yang tidak perlu, lalu simpan.</p>
+                </div>
+                <button id="closeJournalEditModal" type="button" class="text-stone-400 hover:text-stone-700 text-xl font-bold">✕</button>
+            </div>
+
+            <div id="journalEditItems" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
+
+            <div class="mt-4 grid grid-cols-2 gap-2">
+                <button id="cancelJournalEditBtn" type="button" class="bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold py-3 rounded-2xl">
+                    Batal
+                </button>
+                <button id="saveJournalEditBtn" type="button" class="bg-stone-900 hover:bg-black text-white font-bold py-3 rounded-2xl">
+                    Simpan Perubahan
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="confirmModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-3">
         <div class="w-full max-w-md rounded-3xl bg-white p-4 shadow-2xl">
             <div class="flex items-start justify-between gap-3 mb-4">
@@ -536,10 +559,16 @@ $conn->close();
         const closeConfirmModal = document.getElementById('closeConfirmModal');
         const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
         const confirmSaveBtn = document.getElementById('confirmSaveBtn');
+        const journalEditModal = document.getElementById('journalEditModal');
+        const journalEditItems = document.getElementById('journalEditItems');
+        const closeJournalEditModal = document.getElementById('closeJournalEditModal');
+        const cancelJournalEditBtn = document.getElementById('cancelJournalEditBtn');
+        const saveJournalEditBtn = document.getElementById('saveJournalEditBtn');
         const pengeluaranNominal = document.getElementById('pengeluaranNominal');
         const pengeluaranCatatan = document.getElementById('pengeluaranCatatan');
         const simpanPengeluaranBtn = document.getElementById('simpanPengeluaranBtn');
         const toastContainer = document.getElementById('toastContainer');
+        let journalEditState = { transactionId: null, items: [] };
 
         function showToast(type, message) {
             if (!toastContainer) return;
@@ -661,6 +690,39 @@ $conn->close();
         document.addEventListener('click', function (e) {
             if (!inputCari.contains(e.target) && !suggestBox.contains(e.target)) {
                 suggestBox.classList.add('hidden');
+            }
+
+            const increaseQtyButton = e.target.closest('.journal-increase-btn');
+            if (increaseQtyButton) {
+                const index = parseInt(increaseQtyButton.dataset.index, 10);
+                if (!Number.isNaN(index) && journalEditState.items[index]) {
+                    journalEditState.items[index].qty += 1;
+                    renderJournalEditWindow();
+                }
+                return;
+            }
+
+            const decreaseQtyButton = e.target.closest('.journal-decrease-btn');
+            if (decreaseQtyButton) {
+                const index = parseInt(decreaseQtyButton.dataset.index, 10);
+                if (!Number.isNaN(index) && journalEditState.items[index]) {
+                    journalEditState.items[index].qty -= 1;
+                    if (journalEditState.items[index].qty <= 0) {
+                        journalEditState.items.splice(index, 1);
+                    }
+                    renderJournalEditWindow();
+                }
+                return;
+            }
+
+            const removeItemButton = e.target.closest('.remove-journal-item-btn');
+            if (removeItemButton) {
+                const index = parseInt(removeItemButton.dataset.index, 10);
+                if (!Number.isNaN(index)) {
+                    journalEditState.items.splice(index, 1);
+                    renderJournalEditWindow();
+                }
+                return;
             }
 
             const editButton = e.target.closest('.edit-transaksi-btn');
@@ -791,13 +853,99 @@ $conn->close();
             confirmModal.classList.add('hidden');
         }
 
-        function updateTransactionItem(transactionId, currentDetail) {
-            const nextDetail = prompt('Edit detail menu transaksi (contoh: Nasi Gudeg (2x), Teh Manis (1x))', currentDetail);
-            if (nextDetail === null) return;
+        function closeJournalEditWindow() {
+            if (journalEditModal) {
+                journalEditModal.classList.add('hidden');
+            }
+        }
 
-            const cleanDetail = nextDetail.trim();
-            if (cleanDetail === '') {
-                showToast('warning', 'Detail menu tidak boleh kosong.');
+        function parseJournalDetail(detail) {
+            if (!detail) return [];
+
+            return detail
+                .split(/\s*,\s*/)
+                .map(item => item.trim())
+                .filter(Boolean)
+                .map(item => {
+                    const qtyMatch = item.match(/\((\d+)x\)\s*$/i);
+                    let qty = 1;
+                    let label = item;
+
+                    if (qtyMatch) {
+                        qty = parseInt(qtyMatch[1], 10) || 1;
+                        label = item.replace(/\s*\((\d+)x\)\s*$/i, '').trim();
+                    }
+
+                    return {
+                        label: label,
+                        qty: qty
+                    };
+                });
+        }
+
+        function serializeJournalItems(items) {
+            return items
+                .filter(item => item && item.label && item.label.trim())
+                .map(item => {
+                    const label = item.label.trim();
+                    return item.qty > 1 ? `${label} (${item.qty}x)` : label;
+                })
+                .join(', ');
+        }
+
+        function renderJournalEditWindow() {
+            if (!journalEditItems) return;
+
+            if (journalEditState.items.length === 0) {
+                journalEditItems.innerHTML = '<p class="text-sm text-gray-500 text-center py-6">Semua item sudah dihapus. Simpan untuk menghapus transaksi sepenuhnya.</p>';
+                return;
+            }
+
+            journalEditItems.innerHTML = '';
+            journalEditState.items.forEach((item, index) => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between gap-3 rounded-2xl bg-stone-50 border border-stone-200 p-3';
+                row.innerHTML = `
+                    <div class="min-w-0 flex-1">
+                        <div class="font-bold text-stone-800 text-sm leading-tight break-words">${item.label}</div>
+                    </div>
+                    <div class="flex items-center gap-2 bg-white p-1 rounded-xl border border-stone-200">
+                        <button type="button" class="journal-decrease-btn w-8 h-8 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-lg flex items-center justify-center text-sm font-black active:scale-95 transition" data-index="${index}" aria-label="Kurangi jumlah item">-</button>
+                        <span class="font-black text-sm w-5 text-center">${item.qty}</span>
+                        <button type="button" class="journal-increase-btn w-8 h-8 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-lg flex items-center justify-center text-sm font-black active:scale-95 transition" data-index="${index}" aria-label="Tambah jumlah item">+</button>
+                        <button type="button" class="remove-journal-item-btn w-8 h-8 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 flex items-center justify-center active:scale-95 transition" data-index="${index}" aria-label="Hapus item dari jurnal">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 6h18"></path>
+                                <path d="M8 6V4h8v2"></path>
+                                <path d="M19 6l-1 14H6L5 6"></path>
+                                <path d="M10 11v6"></path>
+                                <path d="M14 11v6"></path>
+                            </svg>
+                        </button>
+                    </div>
+                `;
+                journalEditItems.appendChild(row);
+            });
+        }
+
+        function openJournalEditWindow(transactionId, currentDetail) {
+            journalEditState = {
+                transactionId: transactionId,
+                items: parseJournalDetail(currentDetail)
+            };
+
+            renderJournalEditWindow();
+            if (journalEditModal) {
+                journalEditModal.classList.remove('hidden');
+            }
+        }
+
+        function saveJournalEditWindow() {
+            if (!journalEditState.transactionId) return;
+
+            const updatedDetail = serializeJournalItems(journalEditState.items);
+            if (!updatedDetail.trim()) {
+                showToast('warning', 'Tidak ada item yang tersisa untuk disimpan.');
                 return;
             }
 
@@ -806,8 +954,8 @@ $conn->close();
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     action: 'update',
-                    id: transactionId,
-                    detail_item: cleanDetail
+                    id: journalEditState.transactionId,
+                    detail_item: updatedDetail
                 })
             })
             .then(response => {
@@ -820,20 +968,28 @@ $conn->close();
                 try {
                     const data = JSON.parse(text);
                     if (data.status === 'success') {
-                        showToast('success', 'Detail transaksi berhasil diperbarui.');
+                        closeJournalEditWindow();
+                        showToast('success', 'Item jurnal berhasil diperbarui.');
                         setTimeout(() => window.location.reload(), 500);
                     } else {
-                        showToast('error', data.message || 'Gagal memperbarui transaksi.');
+                        closeJournalEditWindow();
+                        showToast('error', data.message || 'Gagal memperbarui jurnal.');
                     }
                 } catch (err) {
                     console.error('Respons PHP Rusak:', text);
+                    closeJournalEditWindow();
                     showToast('error', 'Terjadi error sistem (PHP crash).<br>' + text.substring(0, 200));
                 }
             })
             .catch(error => {
                 console.error('Fetch Error:', error);
+                closeJournalEditWindow();
                 showToast('error', 'Koneksi gagal! Pastikan WiFi aktif dan XAMPP (Apache & MySQL) dalam keadaan RUNNING.');
             });
+        }
+
+        function updateTransactionItem(transactionId, currentDetail) {
+            openJournalEditWindow(transactionId, currentDetail);
         }
 
         function deleteTransactionItem(transactionId) {
@@ -1001,6 +1157,9 @@ $conn->close();
         closeConfirmModal.addEventListener('click', closeConfirmModalWindow);
         cancelConfirmBtn.addEventListener('click', closeConfirmModalWindow);
         confirmSaveBtn.addEventListener('click', submitConfirmedOrder);
+        closeJournalEditModal.addEventListener('click', closeJournalEditWindow);
+        cancelJournalEditBtn.addEventListener('click', closeJournalEditWindow);
+        saveJournalEditBtn.addEventListener('click', saveJournalEditWindow);
     </script>
 </body>
 </html>
