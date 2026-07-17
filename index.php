@@ -110,8 +110,10 @@ $laporan_harian = [];
 foreach ($transaksi_list as $trx) {
     $laporan_harian[] = [
         'jenis' => 'penjualan',
+        'id' => (int) $trx['id'],
         'waktu' => $trx['tanggal'],
         'keterangan' => !empty($trx['detail_menu']) ? $trx['detail_menu'] : 'Tidak ada detail (transaksi lama)',
+        'detail_menu' => $trx['detail_menu'] ?? '',
         'nominal' => (int) $trx['total_penjualan'],
         'badge' => 'Penjualan',
         'badge_class' => 'bg-stone-100 text-stone-700',
@@ -174,15 +176,93 @@ $conn->close();
         body { background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); }
         .tab-btn.active { background: #1c1917; color: white; box-shadow: 0 10px 30px rgba(28, 25, 23, 0.18); }
         .tab-panel.hidden { display: none; }
+
+        #toastContainer {
+            position: fixed;
+            left: 50%;
+            top: calc(12px + env(safe-area-inset-top));
+            transform: translateX(-50%);
+            width: min(92vw, 420px);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        .toast-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px 13px;
+            border-radius: 18px;
+            color: #1f2937;
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(212, 212, 216, 0.9);
+            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+            transform: translateY(8px);
+            opacity: 0;
+            animation: toastIn 0.22s ease forwards;
+            pointer-events: auto;
+        }
+
+        .toast-item.toast-success { border-left: 5px solid #059669; }
+        .toast-item.toast-error { border-left: 5px solid #dc2626; }
+        .toast-item.toast-warning { border-left: 5px solid #d97706; }
+        .toast-item.toast-info { border-left: 5px solid #2563eb; }
+
+        .toast-icon {
+            flex: 0 0 auto;
+            width: 30px;
+            height: 30px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 900;
+        }
+
+        .toast-success .toast-icon { background: #dcfce7; color: #15803d; }
+        .toast-error .toast-icon { background: #fee2e2; color: #b91c1c; }
+        .toast-warning .toast-icon { background: #fef3c7; color: #b45309; }
+        .toast-info .toast-icon { background: #dbeafe; color: #1d4ed8; }
+
+        .toast-text {
+            font-size: 13px;
+            line-height: 1.45;
+            font-weight: 700;
+            color: #111827;
+            word-break: break-word;
+            flex: 1;
+        }
+
+        .toast-close {
+            border: none;
+            background: transparent;
+            color: #64748b;
+            font-size: 18px;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0 2px;
+        }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(8px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
     </style>
 </head>
 <body class="font-sans min-h-screen text-slate-800">
+    <div id="toastContainer" aria-live="polite" aria-atomic="true"></div>
 
     <header class="sticky top-0 z-20 bg-stone-900 text-white shadow-lg">
         <div class="container mx-auto px-2.5 py-2 md:px-4 md:py-2.5">
             <div class="flex items-center justify-between gap-2">
-                <div>
+                <div class="min-w-0">
                     <h1 class="text-sm md:text-lg font-black tracking-tight">Angkringan Mobil</h1>
+                    <div class="text-[10px] md:text-[11px] text-amber-200 font-semibold mt-0.5"></div>
                 </div>
 
                 <div class="flex rounded-full bg-white/10 p-1 gap-1">
@@ -347,9 +427,10 @@ $conn->close();
                                 <table class="w-full text-left border-collapse table-fixed">
                                     <thead class="bg-stone-100 text-stone-700 uppercase text-[11px]">
                                         <tr>
-                                            <th class="p-3 font-bold w-[20%]">Waktu</th>
-                                            <th class="p-3 font-bold w-[50%]">Catatan</th>
-                                            <th class="p-3 font-bold text-right w-[30%]">Nominal</th>
+                                            <th class="p-3 font-bold w-[18%]">Waktu</th>
+                                            <th class="p-3 font-bold w-[47%]">Catatan</th>
+                                            <th class="p-3 font-bold text-right w-[20%]">Nominal</th>
+                                            <th class="p-3 font-bold text-center w-[15%]">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-stone-100 text-sm text-stone-700">
@@ -357,15 +438,50 @@ $conn->close();
                                             <?php foreach ($laporan_harian as $item): ?>
                                                 <tr class="<?= $item['jenis'] === 'pengeluaran' ? 'bg-red-50/60 hover:bg-red-100' : 'hover:bg-stone-50'; ?>">
                                                     <td class="p-3 text-stone-500 align-top"><?= date('H:i', strtotime($item['waktu'])); ?> WIB</td>
-                                                    <td class="p-3 font-medium text-stone-800 align-top break-words"><?= htmlspecialchars($item['keterangan']); ?></td>
+                                                    <td class="p-3 font-medium text-stone-800 align-top break-words">
+                                                        <?= htmlspecialchars($item['keterangan']); ?>
+                                                        <?php if ($item['jenis'] === 'penjualan'): ?>
+                                                            <div class="mt-2 text-[11px] text-stone-500">Edit detail untuk mengubah item atau harga.</div>
+                                                        <?php endif; ?>
+                                                    </td>
                                                     <td class="p-3 text-right font-black align-top <?= htmlspecialchars($item['nominal_class']); ?>">
                                                         Rp <?= number_format((int)$item['nominal'], 0, ',', '.'); ?>
+                                                    </td>
+                                                    <td class="p-3 align-top">
+                                                        <?php if ($item['jenis'] === 'penjualan'): ?>
+                                                            <div class="flex items-center justify-center gap-2">
+                                                                <button type="button"
+                                                                    class="edit-transaksi-btn w-9 h-9 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-700 flex items-center justify-center active:scale-95 transition"
+                                                                    data-id="<?= (int)$item['id']; ?>"
+                                                                    data-detail="<?= htmlspecialchars($item['detail_menu'], ENT_QUOTES, 'UTF-8'); ?>"
+                                                                    aria-label="Edit transaksi">
+                                                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                                        <path d="M12 20h9"></path>
+                                                                        <path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z"></path>
+                                                                    </svg>
+                                                                </button>
+                                                                <button type="button"
+                                                                    class="delete-transaksi-btn w-9 h-9 rounded-xl bg-red-100 hover:bg-red-200 text-red-700 flex items-center justify-center active:scale-95 transition"
+                                                                    data-id="<?= (int)$item['id']; ?>"
+                                                                    aria-label="Hapus transaksi">
+                                                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                                        <path d="M3 6h18"></path>
+                                                                        <path d="M8 6V4h8v2"></path>
+                                                                        <path d="M19 6l-1 14H6L5 6"></path>
+                                                                        <path d="M10 11v6"></path>
+                                                                        <path d="M14 11v6"></path>
+                                                                    </svg>
+                                                                </button>
+                                                            </div>
+                                                        <?php else: ?>
+                                                            <span class="text-[11px] text-stone-400">-</span>
+                                                        <?php endif; ?>
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>
                                         <?php else: ?>
                                             <tr>
-                                                <td colspan="3" class="p-8 text-center text-gray-400">Belum ada data pada tanggal ini.</td>
+                                                <td colspan="4" class="p-8 text-center text-gray-400">Belum ada data pada tanggal ini.</td>
                                             </tr>
                                         <?php endif; ?>
                                     </tbody>
@@ -423,6 +539,39 @@ $conn->close();
         const pengeluaranNominal = document.getElementById('pengeluaranNominal');
         const pengeluaranCatatan = document.getElementById('pengeluaranCatatan');
         const simpanPengeluaranBtn = document.getElementById('simpanPengeluaranBtn');
+        const toastContainer = document.getElementById('toastContainer');
+
+        function showToast(type, message) {
+            if (!toastContainer) return;
+
+            const toast = document.createElement('div');
+            const iconMap = {
+                success: '✓',
+                error: '!',
+                warning: '⚠',
+                info: 'i'
+            };
+
+            toast.className = `toast-item toast-${type}`;
+            toast.innerHTML = `
+                <div class="toast-icon">${iconMap[type] || 'i'}</div>
+                <div class="toast-text">${message}</div>
+                <button class="toast-close" type="button" aria-label="Tutup notifikasi">×</button>
+            `;
+
+            toast.querySelector('.toast-close').addEventListener('click', () => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(8px)';
+                setTimeout(() => toast.remove(), 180);
+            });
+
+            toastContainer.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(8px)';
+                setTimeout(() => toast.remove(), 180);
+            }, 3200);
+        }
 
         function setActiveTab(tabName) {
             tabButtons.forEach(btn => {
@@ -513,6 +662,16 @@ $conn->close();
             if (!inputCari.contains(e.target) && !suggestBox.contains(e.target)) {
                 suggestBox.classList.add('hidden');
             }
+
+            const editButton = e.target.closest('.edit-transaksi-btn');
+            if (editButton) {
+                updateTransactionItem(parseInt(editButton.dataset.id, 10), editButton.dataset.detail || '');
+            }
+
+            const deleteButton = e.target.closest('.delete-transaksi-btn');
+            if (deleteButton) {
+                deleteTransactionItem(parseInt(deleteButton.dataset.id, 10));
+            }
         });
 
         function tambahKeLaporan(id, nama, harga) {
@@ -526,7 +685,7 @@ $conn->close();
 
                 finalHarga = parseInt(inputNominal);
                 if (isNaN(finalHarga) || finalHarga <= 0) {
-                    alert('Nominal yang dimasukkan tidak valid!');
+                    showToast('error', 'Nominal yang dimasukkan tidak valid!');
                     return;
                 }
 
@@ -632,11 +791,94 @@ $conn->close();
             confirmModal.classList.add('hidden');
         }
 
+        function updateTransactionItem(transactionId, currentDetail) {
+            const nextDetail = prompt('Edit detail menu transaksi (contoh: Nasi Gudeg (2x), Teh Manis (1x))', currentDetail);
+            if (nextDetail === null) return;
+
+            const cleanDetail = nextDetail.trim();
+            if (cleanDetail === '') {
+                showToast('warning', 'Detail menu tidak boleh kosong.');
+                return;
+            }
+
+            fetch('simpan_transaksi.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'update',
+                    id: transactionId,
+                    detail_item: cleanDetail
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Server web (Apache) merespon error HTTP: ' + response.status);
+                }
+                return response.text();
+            })
+            .then(text => {
+                try {
+                    const data = JSON.parse(text);
+                    if (data.status === 'success') {
+                        showToast('success', 'Detail transaksi berhasil diperbarui.');
+                        setTimeout(() => window.location.reload(), 500);
+                    } else {
+                        showToast('error', data.message || 'Gagal memperbarui transaksi.');
+                    }
+                } catch (err) {
+                    console.error('Respons PHP Rusak:', text);
+                    showToast('error', 'Terjadi error sistem (PHP crash).<br>' + text.substring(0, 200));
+                }
+            })
+            .catch(error => {
+                console.error('Fetch Error:', error);
+                showToast('error', 'Koneksi gagal! Pastikan WiFi aktif dan XAMPP (Apache & MySQL) dalam keadaan RUNNING.');
+            });
+        }
+
+        function deleteTransactionItem(transactionId) {
+            const approved = window.confirm('Hapus transaksi ini dari jurnal harian?');
+            if (!approved) return;
+
+            fetch('simpan_transaksi.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'delete',
+                    id: transactionId
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Server web (Apache) merespon error HTTP: ' + response.status);
+                }
+                return response.text();
+            })
+            .then(text => {
+                try {
+                    const data = JSON.parse(text);
+                    if (data.status === 'success') {
+                        showToast('success', 'Transaksi berhasil dihapus.');
+                        setTimeout(() => window.location.reload(), 500);
+                    } else {
+                        showToast('error', data.message || 'Gagal menghapus transaksi.');
+                    }
+                } catch (err) {
+                    console.error('Respons PHP Rusak:', text);
+                    showToast('error', 'Terjadi error sistem (PHP crash).<br>' + text.substring(0, 200));
+                }
+            })
+            .catch(error => {
+                console.error('Fetch Error:', error);
+                showToast('error', 'Koneksi gagal! Pastikan WiFi aktif dan XAMPP (Apache & MySQL) dalam keadaan RUNNING.');
+            });
+        }
+
         function simpanLaporan() {
             const total = parseInt(document.getElementById('total-penjualan').dataset.value) || 0;
 
             if (total === 0) {
-                alert('Pilih minimal satu menu terlebih dahulu!');
+                showToast('warning', 'Pilih minimal satu menu terlebih dahulu!');
                 return;
             }
 
@@ -683,21 +925,21 @@ $conn->close();
                         dataLaporan = {};
                         renderLaporan();
                         closeConfirmModalWindow();
-                        alert('✅ Penjualan Berhasil Disimpan!');
+                        showToast('success', 'Penjualan berhasil disimpan!');
                     } else {
                         closeConfirmModalWindow();
-                        alert('❌ Gagal dari PHP: ' + data.message);
+                        showToast('error', 'Gagal dari PHP: ' + data.message);
                     }
                 } catch (err) {
                     console.error('Respons PHP Rusak:', text);
                     closeConfirmModalWindow();
-                    alert('⚠️ Terjadi Error Sistem (PHP Crash)!\n\nPesan Error:\n' + text.substring(0, 200));
+                    showToast('error', 'Terjadi error sistem (PHP crash).<br>' + text.substring(0, 200));
                 }
             })
             .catch(error => {
                 console.error('Fetch Error:', error);
                 closeConfirmModalWindow();
-                alert('🔌 Koneksi Gagal! Pastikan WiFi aktif dan XAMPP (Apache & MySQL) dalam keadaan RUNNING.');
+                showToast('error', 'Koneksi gagal! Pastikan WiFi aktif dan XAMPP (Apache & MySQL) dalam keadaan RUNNING.');
             })
             .finally(() => {
                 confirmSaveBtn.disabled = false;
@@ -710,7 +952,7 @@ $conn->close();
             const catatan = pengeluaranCatatan.value.trim();
 
             if (nominal <= 0 || catatan === '') {
-                alert('Isi nominal dan catatan pengeluaran terlebih dahulu.');
+                showToast('warning', 'Isi nominal dan catatan pengeluaran terlebih dahulu.');
                 return;
             }
 
@@ -737,18 +979,18 @@ $conn->close();
                     if (data.status === 'success') {
                         pengeluaranNominal.value = '';
                         pengeluaranCatatan.value = '';
-                        alert('✅ Pengeluaran berhasil dicatat!');
+                        showToast('success', 'Pengeluaran berhasil dicatat!');
                     } else {
-                        alert('❌ ' + data.message);
+                        showToast('error', data.message);
                     }
                 } catch (err) {
                     console.error('Respons PHP Rusak:', text);
-                    alert('⚠️ Terjadi Error Sistem (PHP Crash)!\n\nPesan Error:\n' + text.substring(0, 200));
+                    showToast('error', 'Terjadi error sistem (PHP crash).<br>' + text.substring(0, 200));
                 }
             })
             .catch(error => {
                 console.error('Fetch Error:', error);
-                alert('🔌 Koneksi Gagal! Pastikan WiFi aktif dan XAMPP (Apache & MySQL) dalam keadaan RUNNING.');
+                showToast('error', 'Koneksi gagal! Pastikan WiFi aktif dan XAMPP (Apache & MySQL) dalam keadaan RUNNING.');
             })
             .finally(() => {
                 simpanPengeluaranBtn.disabled = false;
