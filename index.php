@@ -173,9 +173,47 @@ $conn->close();
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         html { scroll-behavior: smooth; }
-        body { background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); }
-        .tab-btn.active { background: #1c1917; color: white; box-shadow: 0 10px 30px rgba(28, 25, 23, 0.18); }
+        body {
+            background:
+                radial-gradient(circle at top left, rgba(251, 191, 36, 0.18), transparent 22%),
+                radial-gradient(circle at top right, rgba(251, 146, 60, 0.12), transparent 25%),
+                linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+        }
+        .tab-btn {
+            color: #e7e5e4;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            min-width: 84px;
+            letter-spacing: 0.16em;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+        }
+        .tab-btn.active {
+            background: linear-gradient(180deg, #fef3c7 0%, #fbbf24 100%);
+            color: #1c1917;
+            box-shadow: 0 14px 30px rgba(245, 158, 11, 0.34), inset 0 1px 0 rgba(255,255,255,0.85);
+            border-color: rgba(255, 247, 237, 0.95);
+        }
+        .tab-btn:not(.active):hover {
+            background: rgba(255, 255, 255, 0.11);
+            color: #ffffff;
+        }
         .tab-panel.hidden { display: none; }
+        .soft-card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,250,252,0.96) 100%);
+            border: 1px solid rgba(231, 229, 228, 0.95);
+            box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+            backdrop-filter: blur(10px);
+        }
+        .modern-pill {
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            color: #fef3c7;
+        }
+        .glass-chip {
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            backdrop-filter: blur(8px);
+        }
 
         #toastContainer {
             position: fixed;
@@ -257,17 +295,17 @@ $conn->close();
 <body class="font-sans min-h-screen text-slate-800">
     <div id="toastContainer" aria-live="polite" aria-atomic="true"></div>
 
-    <header class="sticky top-0 z-20 bg-stone-900 text-white shadow-lg">
+    <header class="sticky top-0 z-20 border-b border-white/10 bg-slate-950/95 text-white shadow-[0_12px_35px_rgba(15,23,42,0.32)] backdrop-blur-md">
         <div class="container mx-auto px-2.5 py-2 md:px-4 md:py-2.5">
             <div class="flex items-center justify-between gap-2">
                 <div class="min-w-0">
                     <h1 class="text-sm md:text-lg font-black tracking-tight">Angkringan Mobil</h1>
-                    <div class="text-[10px] md:text-[11px] text-amber-200 font-semibold mt-0.5"></div>
+                    <div class="modern-pill inline-flex items-center rounded-full px-2.5 py-1 mt-0.5 text-[10px] md:text-[11px] font-bold tracking-wide">password wifi : semogaberkah</div>
                 </div>
 
-                <div class="flex rounded-full bg-white/10 p-1 gap-1">
-                    <button type="button" data-tab="kasir" class="tab-btn active rounded-full px-3 py-1.5 text-[11px] font-bold transition-all">Kasir</button>
-                    <button type="button" data-tab="laporan" class="tab-btn rounded-full px-3 py-1.5 text-[11px] font-bold transition-all">Laporan</button>
+                <div class="glass-chip flex rounded-2xl p-1 gap-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]">
+                    <button type="button" data-tab="kasir" class="tab-btn active rounded-xl px-4 py-1.5 text-[11px] font-black uppercase transition-all">Kasir</button>
+                    <button type="button" data-tab="laporan" class="tab-btn rounded-xl px-4 py-1.5 text-[11px] font-black uppercase transition-all">Laporan</button>
                 </div>
             </div>
         </div>
@@ -279,7 +317,7 @@ $conn->close();
             <section id="tab-kasir" class="tab-panel">
                 <div class="grid gap-4 lg:grid-cols-[1.45fr_0.95fr]">
                     <div class="space-y-4">
-                        <div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-3 sm:p-4 md:p-4">
+                        <div class="soft-card rounded-2xl p-3 sm:p-4 md:p-4">
                             <div class="mb-3 flex items-center justify-between">
                                 <div>
                                     <h2 class="text-base font-black text-stone-800">Pilih Menu</h2>
@@ -326,7 +364,7 @@ $conn->close();
                     </div>
 
                     <div class="space-y-4">
-                        <div id="cart-panel" class="bg-white rounded-3xl border border-stone-200 shadow-sm p-3 sm:p-4 md:p-5">
+                        <div id="cart-panel" class="soft-card rounded-3xl p-3 sm:p-4 md:p-5">
                             <div class="flex items-center justify-between pb-3 mb-3 border-b border-stone-200">
                                 <div>
                                     <h2 class="text-base font-black text-stone-700">Pesanan</h2>
@@ -357,7 +395,32 @@ $conn->close();
 
             <section id="tab-laporan" class="tab-panel hidden">
                 <div class="space-y-3 overflow-hidden">
-                    <div class="bg-white rounded-2xl border border-stone-200 shadow-sm p-3 md:p-4 overflow-hidden">
+                    <div class="rounded-3xl bg-gradient-to-br from-stone-950 via-stone-900 to-amber-900 p-3 md:p-4 text-white shadow-[0_20px_45px_rgba(15,23,42,0.18)]">
+                        <div class="flex items-start justify-between gap-3 mb-3">
+                            <div>
+                                <div class="text-[10px] font-black uppercase tracking-[0.22em] text-amber-200">Ringkasan bulan ini</div>
+                                <div class="text-lg font-black">Pendapatan Bersih Bulanan</div>
+                            </div>
+                            <div class="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold border border-white/10"><?= htmlspecialchars(date('F Y')); ?></div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                            <div class="rounded-2xl bg-white/10 border border-white/10 p-3">
+                                <div class="text-[10px] uppercase tracking-[0.2em] text-amber-100">Penjualan</div>
+                                <div class="mt-1 text-base font-black">Rp <?= number_format($monthly_total, 0, ',', '.'); ?></div>
+                            </div>
+                            <div class="rounded-2xl bg-white/10 border border-white/10 p-3">
+                                <div class="text-[10px] uppercase tracking-[0.2em] text-amber-100">Pengeluaran</div>
+                                <div class="mt-1 text-base font-black">Rp <?= number_format($monthly_pengeluaran_total, 0, ',', '.'); ?></div>
+                            </div>
+                            <div class="rounded-2xl bg-emerald-400/20 border border-emerald-200/30 p-3">
+                                <div class="text-[10px] uppercase tracking-[0.2em] text-emerald-100">Bersih</div>
+                                <div class="mt-1 text-base font-black text-emerald-50">Rp <?= number_format(max(0, $monthly_total - $monthly_pengeluaran_total), 0, ',', '.'); ?></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="soft-card rounded-2xl p-3 md:p-4 overflow-hidden">
                         <div class="mb-3 bg-amber-50 rounded-2xl border border-amber-200 p-3">
                             <div class="flex items-center justify-between pb-2 mb-2 border-b border-amber-200">
                                 <h3 class="text-sm font-black text-stone-700">Catat Pengeluaran</h3>
@@ -418,7 +481,7 @@ $conn->close();
                             </div>
                         </div>
 
-                        <div class="rounded-2xl border border-stone-200 bg-stone-50 p-3">
+                        <div class="soft-card rounded-2xl p-3">
                             <div class="mb-3">
                                 <h3 class="text-sm font-black text-stone-700">Jurnal Harian</h3>
                             </div>
