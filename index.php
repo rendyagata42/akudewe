@@ -300,7 +300,7 @@ $conn->close();
             <div class="flex items-center justify-between gap-2">
                 <div class="min-w-0">
                     <h1 class="text-sm md:text-lg font-black tracking-tight">Angkringan Mobil</h1>
-                    <div class="modern-pill inline-flex items-center rounded-full px-2.5 py-1 mt-0.5 text-[10px] md:text-[11px] font-bold tracking-wide">password wifi : semogaberkah</div>
+                    <div class="modern-pill inline-flex items-center rounded-full px-2.5 py-1 mt-0.5 text-[10px] md:text-[11px] font-bold tracking-wide"></div>
                 </div>
 
                 <div class="glass-chip flex rounded-2xl p-1 gap-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]">
